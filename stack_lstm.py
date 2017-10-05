@@ -59,20 +59,26 @@ class StackLSTMBuilder:
             name=b'output-embeddings')
         self.controller = dynet.CoupledLSTMBuilder(
             1, embedding_size + stack_embedding_size, hidden_units, params)
+        # Intentionally set the gain for the sigmoid layers low, since this
+        # seems to work better
+        gain = 0.5
         self.pop_strength_layer = add_layer(
             params, hidden_units, 1, sigmoid,
-            weights_initializer=dynet.GlorotInitializer(False, 1.0),
+            weights_initializer=dynet.GlorotInitializer(False, gain),
+            # Initialize the pop bias to -1 to allow information to propagate
+            # through the stack
             bias_initializer=dynet.ConstInitializer(-1.0),
             name='pop-strength')
         self.push_strength_layer = add_layer(
             params, hidden_units, 1, sigmoid,
-            weights_initializer=dynet.GlorotInitializer(False, 1.0),
-            bias_initializer=dynet.GlorotInitializer(False, 1.0),
+            weights_initializer=dynet.GlorotInitializer(False, gain),
+            bias_initializer=dynet.GlorotInitializer(False, gain),
             name='push-strength')
         self.push_value_layer = add_layer(
             params, hidden_units, stack_embedding_size, tanh, name='push-value')
         self.output_layer = combine_layers([
             add_layer(params, hidden_units, hidden_units, tanh, name='output'),
+            # This adds an extra affine layer between the tanh and the softmax
             add_layer(params, hidden_units, output_size, linear, name='softmax')
         ])
 
