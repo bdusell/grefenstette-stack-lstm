@@ -1,0 +1,3 @@
+/virtualenv/
+*.swp
+__pycache__/

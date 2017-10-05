@@ -1,0 +1,1 @@
+git+git://github.com/clab/dynet@87df34103625102493f8c660684146a636e2482c

@@ -1,0 +1,8 @@
+#!/bin/sh
+virtualenv --python=python3 virtualenv && \
+( \
+  . virtualenv/bin/activate && \
+  pip install Cython && \
+  pip install -r requirements.txt \
+) && \
+echo 'Good to go!'
