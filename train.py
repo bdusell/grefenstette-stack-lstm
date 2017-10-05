@@ -38,21 +38,28 @@ def train(args, builder, params):
     trainer = dynet.RMSPropTrainer(params, args.learning_rate)
     trainer.set_clip_threshold(args.clip_threshold)
     for group_no in range(args.iterations):
-        dynet.renew_cg()
         print('batch group #%d...' % (group_no + 1))
         batch_group_loss = 0.0
         for batch_no in range(args.batch_group_size):
-            # Generate a new batch of training data
+            # Sample a new batch of training data
             length = random.randint(*args.training_length_range)
             batch = [
                 random_sequence(length, args.source_alphabet_size)
                 for i in range(args.batch_size)]
+            # Arrange the input and output halves of the sequences into batches
+            # of individual symbols
             input_sequence_batch = transpose(s.input_sequence() for s in batch)
             output_sequence_batch = transpose(s.output_sequence() for s in batch)
+            # Start building the computation graph for this batch
+            dynet.renew_cg()
             state = builder.initial_state(args.batch_size)
+            # Feed everything up to the separator symbol into the model; ignore
+            # outputs
             for symbol_batch in input_sequence_batch:
                 index_batch = [input_symbol_to_index(s) for s in symbol_batch]
                 state = state.next(index_batch, StackLSTMBuilder.INPUT_MODE)
+            # Feed the rest of the sequence into the model and sum up the loss
+            # over the predicted symbols
             symbol_losses = []
             for symbol_batch in output_sequence_batch:
                 index_batch = [output_symbol_to_index(s) for s in symbol_batch]
@@ -65,6 +72,7 @@ def train(args, builder, params):
             batch_group_loss += loss_value
             # Backprop
             loss.backward()
+            # Update parameters
             trainer.update()
         avg_loss = batch_group_loss / (args.batch_size * args.batch_group_size)
         print('  average loss: %0.2f' % avg_loss)
@@ -74,14 +82,20 @@ def test(args, builder):
     total_fine_correct = 0.0
     total_coarse_correct = 0
     for test_no in range(args.test_data_size):
-        dynet.renew_cg()
         fine_correct = 0
+        # Generate a new test example
         length = random.randint(*args.test_length_range)
         sequence = random_sequence(length, args.source_alphabet_size)
+        # Start building the computation graph for this sequence
+        dynet.renew_cg()
         state = builder.initial_state(1)
+        # Feed everything up to and including the separator symbol into the
+        # model
         for symbol in sequence.input_sequence():
             index = input_symbol_to_index(symbol)
             state = state.next([index], StackLSTMBuilder.INPUT_MODE)
+        # Feed the rest of the sequence into the model and stop at the first
+        # error
         for correct_symbol in sequence.output_sequence():
             predicted_index = argmax(state.output().value())
             predicted_symbol = output_index_to_symbol(predicted_index)
@@ -101,19 +115,34 @@ def test(args, builder):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--hidden-units', type=int, default=256)
-    parser.add_argument('--learning-rate', type=float, default=0.001)
-    parser.add_argument('--iterations', type=int, default=20)
-    parser.add_argument('--source-alphabet-size', type=int, default=128)
-    parser.add_argument('--embedding-size', type=int, default=64)
-    parser.add_argument('--stack-embedding-size', type=int, default=256)
-    parser.add_argument('--clip-threshold', type=float, default=1.0)
-    parser.add_argument('--batch-size', type=int, default=10)
-    parser.add_argument('--batch-group-size', type=int, default=100)
-    parser.add_argument('--training-length-range', type=parse_range, default=(8, 64))
-    parser.add_argument('--test-length-range', type=parse_range, default=(65, 128))
-    parser.add_argument('--test-data-size', type=int, default=1000)
-    parser.add_argument('--output')
+    parser.add_argument('--hidden-units', type=int, default=256,
+        help='Number of hidden units to use in the LSTM controller.')
+    parser.add_argument('--learning-rate', type=float, default=0.001,
+        help='Initial learning rate for RMSProp.')
+    parser.add_argument('--iterations', type=int, default=20,
+        help='Number of iterations of training to run. By default, each iteration is equivalent to 1000 training examples.')
+    parser.add_argument('--source-alphabet-size', type=int, default=128,
+        help='Number of symbols to use in the source sequence.')
+    parser.add_argument('--embedding-size', type=int, default=64,
+        help='Input embedding size.')
+    parser.add_argument('--stack-embedding-size', type=int, default=256,
+        help='Size of vector values stored on the neural stack.')
+    parser.add_argument('--clip-threshold', type=float, default=1.0,
+        help='Gradient clipping threshold.')
+    parser.add_argument('--batch-size', type=int, default=10,
+        help='Batch size.')
+    parser.add_argument('--batch-group-size', type=int, default=100,
+        help='Number of batches per iteration.')
+    parser.add_argument('--training-length-range', type=parse_range, default=(8, 64),
+        help='Range of lengths of source sequences during training.',
+        metavar='MIN,MAX')
+    parser.add_argument('--test-length-range', type=parse_range, default=(65, 128),
+        help='Range of lengths of source sequences during testing.',
+        metavar='MIN,MAX')
+    parser.add_argument('--test-data-size', type=int, default=1000,
+        help='Number of samples used in the test data.')
+    parser.add_argument('--output', type=str, default=None,
+        help='Optional output file where parameters will be saved after training.')
     args = parser.parse_args()
 
     params = dynet.ParameterCollection()

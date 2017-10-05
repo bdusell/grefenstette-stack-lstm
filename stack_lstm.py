@@ -13,14 +13,14 @@ class NeuralStack:
         self.elements = []
 
     def reading(self):
-        result = self.vector_zero
+        terms = [self.vector_zero]
         strength_left = self.reading_depth
         for element in reversed(self.elements):
-            result += element.value * dynet.bmin(
+            terms.append(element.value * dynet.bmin(
                 element.strength,
-                dynet.bmax(self.scalar_zero, strength_left))
+                dynet.bmax(self.scalar_zero, strength_left)))
             strength_left -= element.strength
-        return result
+        return dynet.esum(terms)
 
     def push(self, strength, value):
         self.elements.append(NeuralStack.Element(value, strength))
@@ -57,7 +57,7 @@ class StackLSTMBuilder:
         self.output_embeddings = params.add_lookup_parameters(
             (output_size, embedding_size),
             name=b'output-embeddings')
-        self.controller = dynet.LSTMBuilder(
+        self.controller = dynet.CoupledLSTMBuilder(
             1, embedding_size + stack_embedding_size, hidden_units, params)
         self.pop_strength_layer = add_layer(
             params, hidden_units, 1, sigmoid,
