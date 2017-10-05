@@ -52,9 +52,8 @@ run on GPU in this case. If you want to test out a smaller version of the
 model first, try running `train.py` with smaller values for number of hidden
 units, embedding size, etc. You can control the dimensions of the model trained,
 number of training samples, learning rate, and more by passing command line
-arguments to `train.py`. You can also specify an output file where the
-parameters of the trained model will be saved. Run `train.py --help` for more
-details.
+arguments to `train.py`. You can also save the parameters of the trained model
+to an output file. Run `python train.py --help` for more details.
 
 For example:
 
@@ -81,9 +80,9 @@ improvement on success rate, so they are initialized with an Xavier
 initialization gain of 0.5 in this implementation, as opposed to the
 recommended value of 4. Success is also very sensitive to the choice of
 optimizer (RMSProp in this case) and initial learning rate. The set of default
-values for `train.py` happens to work very well. If you deviate from the
-defaults, you will need to fiddle a lot with the various arguments to
-`train.py` to get an experimental setup that succeeds.
+values for `train.py` is one that happens to work well. If you deviate from
+these default values, you will need to fiddle a lot with the various arguments
+to `train.py` to get an experimental setup that succeeds.
 
 The source code for the model is found in `stack_lstm.py`.
 
