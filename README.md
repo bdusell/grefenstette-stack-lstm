@@ -45,7 +45,7 @@ sequence reversal transduction task as described in the paper. Note that it is
 rather typical for this architecture to get permanently stuck in a local
 minimum during training, so you may need to try more than once to get a
 successful run. Using the default values for `train.py`, you should be able to
-successfully train a model about 85% of the time.
+successfully train a model about 80% of the time.
 
 Note that the default size of the model is quite large, and the script is best
 run on GPU in this case. If you want to test out a smaller version of the
