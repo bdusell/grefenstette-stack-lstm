@@ -8,7 +8,6 @@ class NeuralStack:
 
     def __init__(self, embedding_size, batch_size):
         self.vector_zero = dynet.zeroes((embedding_size,), batch_size)
-        self.scalar_zero = dynet.zeroes((1,), batch_size)
         self.reading_depth = dynet.inputTensor([1.0] * batch_size, True)
         self.elements = []
 
@@ -18,7 +17,7 @@ class NeuralStack:
         for element in reversed(self.elements):
             terms.append(element.value * dynet.bmin(
                 element.strength,
-                dynet.bmax(self.scalar_zero, strength_left)))
+                dynet.rectify(strength_left)))
             strength_left -= element.strength
         return dynet.esum(terms)
 
@@ -29,11 +28,8 @@ class NeuralStack:
         strength_left = strength
         for element in reversed(self.elements):
             old_strength = element.strength
-            element.strength = dynet.bmax(
-                self.scalar_zero,
-                old_strength - dynet.bmax(
-                    self.scalar_zero,
-                    strength_left))
+            element.strength = dynet.rectify(
+                old_strength - dynet.rectify(strength_left))
             strength_left -= old_strength
 
     class Element:
